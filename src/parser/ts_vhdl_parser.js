@@ -26,16 +26,21 @@ class Parser extends ts_base_parser.Ts_base_parser {
   constructor(comment_symbol) {
     super();
     this.comment_symbol = comment_symbol;
+    this.loaded = false;
   }
 
   async init() {
-    this.code = '';
-    const Parser = require('web-tree-sitter');
-    await Parser.init();
-    this.parser = new Parser();
-    let Lang = await
-      Parser.Language.load(path.join(__dirname, path.sep + "parsers" + path.sep + "tree-sitter-vhdl.wasm"));
-    this.parser.setLanguage(Lang);
+    try{
+      this.code = '';
+      const Parser = require('web-tree-sitter');
+      await Parser.init();
+      this.parser = new Parser();
+      let Lang = await
+        Parser.Language.load(path.join(__dirname, path.sep + "parsers" + path.sep + "tree-sitter-vhdl.wasm"));
+      this.parser.setLanguage(Lang);
+      this.loaded = true;
+    }
+    catch(e){console.log(e);}
   }
 
   parse(code) {
@@ -47,17 +52,25 @@ class Parser extends ts_base_parser.Ts_base_parser {
   }
 
   get_all(code, comment_symbol) {
+    if (this.loaded === false){
+      return undefined;
+    }
+    let struct;
     if (comment_symbol !== undefined) {
       this.comment_symbol = comment_symbol;
     }
     let entity_file = this.get_entity_file(code);
     if (entity_file === undefined) {
       let package_file = this.get_package_file(code);
-      return package_file;
+      struct = this.parse_doxy(package_file,"package");
     }
     else {
-      return entity_file;
+      struct =  this.parse_doxy(entity_file,"entity");
+      struct =  this.parse_mermaid(entity_file,"entity");
+      struct =  this.parse_ports_group(struct);
+      struct =  this.parse_virtual_bus(struct);
     }
+    return struct;
   }
 
   get_entity_file(code) {
@@ -65,11 +78,14 @@ class Parser extends ts_base_parser.Ts_base_parser {
       let code_lines = code.split('\n');
 
       let entity_declaration = this.get_entity_declaration(code);
-      if (code_lines.length > 10000) {
+      if (code_lines.length > 99999999999999) {
         let elements = {
           'entity': entity_declaration.entity,
           'generics': entity_declaration.generics,
-          'ports': entity_declaration.ports
+          'ports': entity_declaration.ports,
+          'body': { 'processes': [], 'instantiations': [] },
+          'declarations': {'types': [], 'signals': [],
+          'constants': [], 'functions': []}
         };
         return elements;
       }
@@ -130,7 +146,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
           description += txt_comment.slice(1);
         }
         else {
-          description = '';
+          // description = '';
         }
       }
       else {
@@ -186,7 +202,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
           entity_description += txt_comment.slice(1);
         }
         else {
-          entity_description = '';
+          // entity_description = '';
         }
       }
       else {
@@ -223,7 +239,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
               entity_description += txt_comment.slice(1);
             }
             else {
-              entity_description = '';
+              // entity_description = '';
             }
           }
         }
@@ -235,7 +251,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
           entity_description += txt_comment.slice(1);
         }
         else {
-          entity_description = '';
+          // entity_description = '';
         }
       }
       else {
@@ -315,7 +331,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
             }
           }
           if (check === false) {
-            comments += txt_comment.slice(1);
+            comments += txt_comment.slice(1)+"\n";
           }
         }
       }

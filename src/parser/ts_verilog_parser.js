@@ -20,27 +20,34 @@
 // along with Colibri.  If not, see <https://www.gnu.org/licenses/>.
 
 const path = require('path');
-const Tree_sitter = require('web-tree-sitter');
 const ts_base_parser = require('./ts_base_parser');
 
 class Parser extends ts_base_parser.Ts_base_parser {
   constructor(comment_symbol) {
     super();
     this.comment_symbol = comment_symbol;
-    this.loaded_wasm = false;
+    this.loaded = false;
   }
 
   async init() {
-    await Tree_sitter.init();
-    this.parser = new Tree_sitter();
-    let Lang = await Tree_sitter.Language.load(path.join(__dirname, path.sep +
-      "parsers" + path.sep + "tree-sitter-verilog.wasm"));
-    this.parser.setLanguage(Lang);
-    this.loaded_wasm = true;
+    try{
+      const Tree_sitter = require('web-tree-sitter');
+      await Tree_sitter.init();
+      this.parser = new Tree_sitter();
+      let Lang = await Tree_sitter.Language.load(path.join(__dirname, path.sep +
+        "parsers" + path.sep + "tree-sitter-verilog.wasm"));
+      this.parser.setLanguage(Lang);
+      this.loaded = true;
+    }
+    catch(e){console.log(e);}
   }
 
   async get_all(sourceCode, comment_symbol) {
+    if (this.loaded === false){
+      return undefined;
+    }
     let structure;
+    let file_type;
     if (comment_symbol !== undefined) {
       this.comment_symbol = comment_symbol;
     }
@@ -54,6 +61,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
       if (module_header.length === 0) {
         let arch_body = tree;
         let body_elements = this.get_body_elements_and_declarations(arch_body, lines, comments, true);
+        file_type = "package";
 
         structure = {
           "package": this.get_package_declaration(tree.rootNode, lines), // package_identifier 
@@ -67,6 +75,7 @@ class Parser extends ts_base_parser.Ts_base_parser {
       } else {
         let arch_body = this.get_architecture_body(tree);
         let body_elements = this.get_body_elements_and_declarations(arch_body, lines, comments);
+        file_type = "entity";
 
         structure = {
           'libraries': this.get_libraries(tree.rootNode, lines, comments),  // includes
@@ -84,6 +93,12 @@ class Parser extends ts_base_parser.Ts_base_parser {
             'functions': body_elements.functions
           }
         };
+      }
+      structure =  this.parse_doxy(structure,file_type);
+      structure =  this.parse_mermaid(structure,file_type);
+      if (file_type === "entity"){
+        structure = this.parse_ports_group(structure);
+        structure = this.parse_virtual_bus(structure);
       }
       return structure;
     }

@@ -1,0 +1,70 @@
+{
+  "entity": {
+    "name": "arith_counter_bcd",
+    "description": "Some description can be added here\nalso in multi-linesAnother description can be added hereAnd more core description can be added here\nanother description of the core is also ok"
+  },
+  "generics": [
+    {
+      "name": "DIGITS",
+      "type": "positive",
+      "line": 12,
+      "direction": "",
+      "default_value": "",
+      "description": " Number of BCD digits"
+    }
+  ],
+  "ports": [
+    {
+      "name": "clk",
+      "type": "std_logic",
+      "line": 16,
+      "direction": "in",
+      "default_value": "",
+      "description": " system clock",
+      "group": ""
+    },
+    {
+      "name": "rst",
+      "type": "std_logic",
+      "line": 17,
+      "direction": "in",
+      "default_value": "",
+      "description": " Reset to 0",
+      "group": ""
+    },
+    {
+      "name": "inc",
+      "type": "std_logic",
+      "line": 18,
+      "direction": "in",
+      "default_value": "",
+      "description": " Increment",
+      "group": ""
+    },
+    {
+      "name": "val",
+      "type": "T_BCD_VECTOR(DIGITS+DIGITS-1 downto 0)",
+      "line": 19,
+      "direction": "out",
+      "default_value": "",
+      "description": " Value output",
+      "group": ""
+    }
+  ],
+  "body": {
+    "processes": [],
+    "instantiations": []
+  },
+  "declarations": {
+    "types": [],
+    "signals": [],
+    "constants": [],
+    "functions": []
+  },
+  "info": {
+    "file": "example_8.vhd",
+    "author": "el3ctrician (elbadriahmad@gmail.com)",
+    "version": "0.1",
+    "date": "2020-07-10"
+  }
+}

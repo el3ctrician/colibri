@@ -1,4 +1,4 @@
-// Copyright 2020 Teros Technology
+// Copyright 2021 Teros Technology
 //
 // Ismael Perez Rojo
 // Carlos Alberto Ruiz Naranjo
@@ -27,25 +27,73 @@
 const General = require('../general/general');
 const Codes = require('./codes');
 const ParserLib = require('../parser/factory');
+const fs = require('fs');
 
 class Verilog_editor {
   constructor() { }
 
+  get_header(header_file_path) {
+    if (header_file_path === undefined || header_file_path === '') {
+      return '';
+    }
+
+    try {
+      let header_f = fs.readFileSync(header_file_path, 'utf8');
+      let lines = header_f.split(/\r?\n/g);
+      let header = '';
+      for (let i = 0; i < lines.length; i++) {
+        const element = lines[i];
+        header += `//  ${element}\n`;
+      }
+      return header + '\n';
+    }
+    catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(e);
+      return '';
+    }
+  }
+
   async generate(src, options) {
+    let header = '';
+    if (options !== undefined) {
+      header = this.get_header(options.header_file_path);
+    }
+
+    this.indet_0 = '';
+    this.indet_1 = '';
+    this.indet_2 = '';
+    this.indet_3 = '';
+    if (options !== undefined && options.indent_char !== undefined) {
+      let base = options.indent_char;
+      this.indet_0 = base.repeat(0);
+      this.indet_1 = base.repeat(1);
+      this.indet_2 = base.repeat(2);
+      this.indet_3 = base.repeat(3);
+      this.indet_4 = base.repeat(4);
+    }
+    else {
+      let base = '    ';
+      this.indet_0 = base.repeat(0);
+      this.indet_1 = base.repeat(1);
+      this.indet_2 = base.repeat(2);
+      this.indet_3 = base.repeat(3);
+      this.indet_4 = base.repeat(4);
+    }
     let parser = new ParserLib.ParserFactory;
     parser = await parser.getParser(General.LANGUAGES.VERILOG, '');
     let structure = await parser.get_all(src);
     if (structure === undefined) {
       return undefined;
     }
-    var vunit = false;
-    var version = General.VERILOGSTANDARS.VERILOG2001;
+    let vunit = false;
+    let version = General.VERILOGSTANDARS.VERILOG2001;
     if (options !== null) {
       vunit = options['type'] === Codes.TYPESTESTBENCH.VUNIT;
       version = options['version'];
     }
-    var space = '  ';
-    var str = '';
+    let space = this.indet_1;
+    let str = header;
     if (vunit === true) {
       str += this.set_vunit_libraries();
       str += '\n';
@@ -91,14 +139,6 @@ class Verilog_editor {
   set_entity(m) {
     var str = '';
     str += `module ${m['name']}_tb;\n`;
-    return str;
-  }
-
-  set_vunit_entity(m) {
-    var str = '';
-    str += 'entity ' + m['name'] + '_tb is\n';
-    str += '  generic (runner_cfg : string);\n';
-    str += 'end;\n';
     return str;
   }
 
@@ -172,21 +212,21 @@ class Verilog_editor {
     str += `${space}${name}\n`;
     //Parameters
     if (generics.length > 0) {
-      str += `${space}  #(\n`;
+      str += `${this.indet_1}#(\n`;
       for (let x = 0; x < generics.length - 1; ++x) {
-        str += `${space}    ${generics[x]['name']},\n`;
+        str += `${this.indet_2}${generics[x]['name']},\n`;
       }
-      str += `${space}    ${generics[generics.length - 1]['name']}\n`;
-      str += `${space}  )\n`;
+      str += `${this.indet_2}${generics[generics.length - 1]['name']}\n`;
+      str += `${this.indet_2})\n`;
     }
     //Ports
     if (ports.length > 0) {
       str += `${space} ${name}_dut (\n`;
       for (let x = 0; x < ports.length - 1; ++x) {
-        str += `${space}    ${ports[x]['name']},\n`;
+        str += `${this.indet_2}${ports[x]['name']},\n`;
       }
-      str += `${space}    ${ports[ports.length - 1]['name']}\n`;
-      str += `${space}  );\n`;
+      str += `${this.indet_2}${ports[ports.length - 1]['name']}\n`;
+      str += `${this.indet_1});\n`;
     }
     return str;
   }
@@ -194,25 +234,25 @@ class Verilog_editor {
   set_instance2001(space, name, generics, ports) {
     var str = '';
     //Instance name
-    str += `${space} ${name} \n`;
+    str += `${space}${name} \n`;
     //Parameters
     if (generics.length > 0) {
-      str += `${space}  #(\n`;
+      str += `${space}#(\n`;
       for (let x = 0; x < generics.length - 1; ++x) {
-        str += `${space}    .${generics[x]['name']}(${generics[x]['name']} ),\n`;
+        str += `${this.indet_2}.${generics[x]['name']}(${generics[x]['name']} ),\n`;
       }
-      str += `${space}    .${generics[generics.length - 1]['name']} (
+      str += `${this.indet_2}.${generics[generics.length - 1]['name']} (
         ${generics[generics.length - 1]['name']} )\n`;
-      str += `${space}  )\n`;
+      str += `${this.indet_1})\n`;
     }
     //Ports
     if (ports.length > 0) {
-      str += `${space} ${name}_dut (\n`;
+      str += `${space}${name}_dut (\n`;
       for (let x = 0; x < ports.length - 1; ++x) {
-        str += `${space}    .${ports[x]['name']} (${ports[x]['name']} ),\n`;
+        str += `${this.indet_2}.${ports[x]['name']} (${ports[x]['name']} ),\n`;
       }
-      str += `${space}    .${ports[ports.length - 1]['name']}  ( ${ports[ports.length - 1]['name']})\n`;
-      str += `${space}  );\n`;
+      str += `${this.indet_2}.${ports[ports.length - 1]['name']}  ( ${ports[ports.length - 1]['name']})\n`;
+      str += `${space});\n`;
     }
     return str;
   }
@@ -220,8 +260,8 @@ class Verilog_editor {
   set_vunit_process(space) {
     var str = '';
     str += `${space}\`TEST_SUITE begin\n`;
-    str += `${space}  // It is possible to create a basic test bench without any test cases\n`;
-    str += `${space}  $display("Hello world");\n`;
+    str += `${this.indet_2}// It is possible to create a basic test bench without any test cases\n`;
+    str += `${this.indet_2}$display("Hello world");\n`;
     str += `${space}end\n`;
     return str;
   }
@@ -229,9 +269,9 @@ class Verilog_editor {
   set_main(space) {
     var str = '';
     str += `${space}initial begin\n`;
-    str += `${space}  begin\n`;
-    str += `${space}    $finish;\n`;
-    str += `${space}  end\n`;
+    str += `${this.indet_2}begin\n`;
+    str += `${this.indet_3}$finish;\n`;
+    str += `${this.indet_2}end\n`;
     str += `${space}end\n`;
     return str;
   }
@@ -243,7 +283,7 @@ class Verilog_editor {
         (ports[x]["name"].includes("clk") || ports[x]["name"].includes("clock"));
       if (is_clk === true) {
         str += `${space}always\n`;
-        str += `${space}  #5  ${ports[x]["name"]} = ! ${ports[x]["name"]} ;\n`;
+        str += `${this.indet_2}#5  ${ports[x]["name"]} = ! ${ports[x]["name"]} ;\n`;
       }
     }
     return str;
@@ -252,6 +292,27 @@ class Verilog_editor {
 
 class Verilog_component extends Verilog_editor {
   async generate(src, options) {
+    this.indet_0 = '';
+    this.indet_1 = '';
+    this.indet_2 = '';
+    this.indet_3 = '';
+    if (options !== undefined && options.indent_char !== undefined) {
+      let base = options.indent_char;
+      this.indet_0 = base.repeat(0);
+      this.indet_1 = base.repeat(1);
+      this.indet_2 = base.repeat(2);
+      this.indet_3 = base.repeat(3);
+      this.indet_4 = base.repeat(4);
+    }
+    else {
+      let base = '    ';
+      this.indet_0 = base.repeat(0);
+      this.indet_1 = base.repeat(1);
+      this.indet_2 = base.repeat(2);
+      this.indet_3 = base.repeat(3);
+      this.indet_4 = base.repeat(4);
+    }
+    
     let parser = new ParserLib.ParserFactory;
     parser = await parser.getParser(General.LANGUAGES.VERILOG, '');
     let structure = await parser.get_all(src);
